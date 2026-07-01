@@ -2,7 +2,8 @@ use actix_web::{HttpResponse, Responder, get, web::Data};
 use mdns_sd::{Error, ServiceDaemon, ServiceInfo};
 use serde::Serialize;
 
-use crate::{AppState, PORT, get_ips};
+use crate::{AppState, PORT};
+use local_ip_address::local_ip;
 
 #[derive(Serialize)]
 pub struct ServerInfo {
@@ -23,12 +24,7 @@ pub fn broadcast_service() -> Result<ServiceDaemon, Error> {
     let service_type = "_http._tcp.local.";
     let instance_name = "Kerosene";
     let hostname = "kerosene.local.";
-    let ip = get_ips()
-        .ok_or(Error::Msg("G".to_string()))?
-        .into_iter()
-        .filter(|ip| ip.starts_with("192"))
-        .next()
-        .unwrap();
+    let ip = local_ip().unwrap().to_string();
     let properties = [("app", "Lantern"), ("version", "1")];
     let service = ServiceInfo::new(
         service_type,

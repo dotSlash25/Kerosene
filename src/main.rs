@@ -1,6 +1,7 @@
 use std::fs;
 
 use actix_web::{App, HttpResponse, HttpServer, Responder, get, web};
+use local_ip_address::local_ip;
 
 mod discovery;
 mod state;
@@ -22,18 +23,6 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("<html><body>This is manual <i>Hello</i></body></html>")
 }
 
-fn get_ips() -> Option<Vec<String>> {
-    let ips: Vec<String> = ipconfig::get_adapters()
-        .ok()?
-        .iter()
-        .map(|ip| ip.ip_addresses())
-        .flatten()
-        .filter(|i| i.is_ipv4())
-        .map(|i| i.to_string())
-        .collect();
-    Some(ips)
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let server_name = fs::read_to_string(SAVE_PATH).unwrap_or(register_server());
@@ -43,18 +32,13 @@ async fn main() -> std::io::Result<()> {
         name: server_name,
         videos: videos,
     });
-    let ips = get_ips().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::NetworkUnreachable,
-            "No network interfaces found",
-        )
-    })?;
     let _mdns = broadcast_service().unwrap();
     println!("Kerosene server initiated");
-    println!("Server running on ips:");
-    for ip in ips.iter().filter(|ip| ip.starts_with("192")) {
-        println!("{ip}:{PORT}");
-    }
+    println!(
+        "Server running on ip: {}:{}",
+        local_ip().unwrap().to_string(),
+        PORT
+    );
 
     HttpServer::new(move || {
         App::new()
