@@ -12,7 +12,7 @@ use state::*;
 use videos::*;
 
 const PORT: u16 = 8000;
-const SAVE_PATH: &'static str = "kerosene_data.txt";
+const SAVE_PATH: &'static str = "./kerosene_data.txt";
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -25,7 +25,7 @@ async fn manual_hello() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let server_name = fs::read_to_string(SAVE_PATH).unwrap_or(register_server());
+    let server_name = fs::read_to_string(SAVE_PATH).unwrap_or_else(|_| register_server());
 
     let videos = scan_videos();
     let state = web::Data::new(AppState {
@@ -58,11 +58,12 @@ fn register_server() -> String {
     println!("Looks like it is your first run");
     println!("Name your server:");
     let mut buf = String::new();
-    let n = std::io::stdin().read_line(&mut buf).unwrap_or_default();
-    if n == 0 {
+    std::io::stdin().read_line(&mut buf).unwrap_or_default();
+    buf = buf.trim().to_string();
+    if buf.is_empty() {
         buf = "Server".to_string();
     }
     fs::write(SAVE_PATH, &buf)
         .expect("Failed to create savefile, you might have to register again");
-    buf.clone()
+    buf
 }
